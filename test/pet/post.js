@@ -1,7 +1,7 @@
-const cloneDeep = require("lodash.clonedeep");
+/* eslint-disable mocha/no-hooks-for-single-case */
 const request = require("supertest");
 const chai = require("chai");
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const chaiSubset = require("chai-subset");
 
 chai.use(chaiSubset);
@@ -42,7 +42,7 @@ async function checkPetNotExist(id) {
 }
 
 describe("POST::/pet", function () {
-  describe("Add a new pet with all request fields", function () {
+  describe("Add a new pet with all request fields present", function () {
     before(async function () {
       await deletePet(newPet.id.toString());
       await checkPetNotExist(newPet.id.toString());
@@ -66,22 +66,27 @@ describe("POST::/pet", function () {
             "application/json"
           );
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
 
-    it("Comfirm the added pet information", async function () {
+    it("Confirm the newly added pet information", async function () {
       await request(petUrl)
         .get(newPet.id.toString())
         .expect(200)
         .then((res) => {
           expect(res.body).to.containSubset(newPet);
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Add a new pet with empty fields", function () {
     let id = 0;
+    after(async function () {
+      await deletePet(id.toString());
+      await checkPetNotExist(id.toString());
+    });
+
     it("New pet should be added successfully", async function () {
       await request(petUrl)
         .post("")
@@ -92,16 +97,11 @@ describe("POST::/pet", function () {
           expect(res.body.id).to.be.a("number");
           id = res.body.id;
         })
-        .catch((err) => assert.fail(err));
-    });
-
-    it("Delete the added pet for test", async function () {
-      await deletePet(id.toString());
-      await checkPetNotExist(id.toString());
+        .catch((err) => expect.fail(err));
     });
   });
 
-  describe("POST request fields have duplicated data with existing data", function () {
+  describe("Add a new pet when an existing pet with the same ID already exists", function () {
     before(async function () {
       await deletePet(newPet.id.toString());
       await checkPetNotExist(newPet.id.toString());
@@ -118,39 +118,36 @@ describe("POST::/pet", function () {
         .send(JSON.stringify(newPet))
         .set("content-type", "application/json")
         .expect(200)
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
 
-    it("Add pet data with same id and it should be added successfully", async function () {
-      let newPet2 = cloneDeep(newPet);
-      newPet2.name = "Pet2";
-
+    it("Add Pet1 again expecting error code 405 to be returned", async function () {
       await request(petUrl)
         .post("")
-        .send(JSON.stringify(newPet2))
+        .send(JSON.stringify(newPet))
         .set("content-type", "application/json")
-        .expect(200)
+        .expect(405)
         .then((res) => {
-          expect(res.body).to.containSubset(newPet2);
+          expect(res.body.message).to.be.eql("Invalid input");
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Request with missing json body", function () {
-    it("Should not receive a response with successful status code", async function () {
+    it("Should receive an unsuccessful response from API ", async function () {
       await request(petUrl)
         .post("")
         .set("content-type", "application/json")
         .then((res) => {
           expect(res.status).to.be.at.least(400);
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Request with invalid request header", function () {
-    it("Should not receive a response with successful status code", async function () {
+    it("Should receive an unsuccessful response from API ", async function () {
       await request(petUrl)
         .post("")
         .send(JSON.stringify(newPet))
@@ -158,13 +155,18 @@ describe("POST::/pet", function () {
         .then((res) => {
           expect(res.status).to.be.at.least(400);
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Request with unexpected fields in json request body", function () {
     let id = 0;
-    it("Should receive a succsessful response", async function () {
+    after(async function () {
+      await deletePet(id.toString());
+      await checkPetNotExist(id.toString());
+    });
+
+    it("Should receive a successful response as API should ignore the unexpected fields", async function () {
       await request(petUrl)
         .post("")
         .send(JSON.stringify({ test: "test" }))
@@ -174,12 +176,7 @@ describe("POST::/pet", function () {
           expect(res.body.id).to.be.a("number");
           id = res.body.id;
         })
-        .catch((err) => assert.fail(err));
-    });
-
-    it("Delete added pet", async function () {
-      await deletePet(id.toString());
-      await checkPetNotExist(id.toString());
+        .catch((err) => expect.fail(err));
     });
   });
 
@@ -201,7 +198,7 @@ describe("POST::/pet", function () {
       status: "available",
     };
 
-    it("Should receive a validation error response", async function () {
+    it("Should receive a 405 error response", async function () {
       await request(petUrl)
         .post("")
         .send(JSON.stringify(newPetWithInvalidValue))
@@ -210,7 +207,7 @@ describe("POST::/pet", function () {
         .then((res) => {
           expect(res.body.message).to.be.eql("Invalid input");
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
@@ -232,7 +229,7 @@ describe("POST::/pet", function () {
       status: "available",
     };
 
-    it("Should receive an validation error response", async function () {
+    it("Should receive a 405 error response", async function () {
       await request(petUrl)
         .post("")
         .send(JSON.stringify(newPetWithOverflowedValue))
@@ -241,14 +238,14 @@ describe("POST::/pet", function () {
         .then((res) => {
           expect(res.body.message).to.be.eql("Invalid input");
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Request with invalid json format", function () {
     const invalidJson = "{Invalid json}";
 
-    it("Should not receive a response with successful status code'", async function () {
+    it("Should receive an unsuccessful response from API'", async function () {
       await request(petUrl)
         .post("")
         .send(JSON.stringify(invalidJson))
@@ -256,12 +253,12 @@ describe("POST::/pet", function () {
         .then((res) => {
           expect(res.status).to.be.at.least(400);
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
-  describe("Request with unexpected parameter", function () {
-    it("Response should not have successful status code'", async function () {
+  describe("Request with unexpected parameter in the URL", function () {
+    it("Response should receive an unsuccessful response from API'", async function () {
       await request(petUrl)
         .post(newPet.id.toString())
         .send(newPet)
@@ -269,7 +266,7 @@ describe("POST::/pet", function () {
         .then((res) => {
           expect(res.status).to.be.at.least(400);
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 });

@@ -1,6 +1,7 @@
+/* eslint-disable mocha/no-hooks-for-single-case */
 const request = require("supertest");
 const chai = require("chai");
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const chaiSubset = require("chai-subset");
 
 chai.use(chaiSubset);
@@ -59,12 +60,12 @@ async function checkPetNotExist(id) {
 
 describe("DELETE::/pet/$petId", function () {
   describe("Delete with valid petId and api_key", function () {
-    it("Add a new pet for test", async function () {
+    it("Add a new pet", async function () {
       await addNewPet(newPet);
       await checkPetExist(newPet.id.toString());
     });
 
-    it("Send request and should receive a succsessful response", async function () {
+    it("Send DELETE request and should receive a successful response", async function () {
       await request(petUrl)
         .delete(newPet.id.toString())
         .set("api_key", "special-key")
@@ -82,13 +83,27 @@ describe("DELETE::/pet/$petId", function () {
     });
   });
 
-  describe("Delete petId which does not exist", function () {
-    it("Delete pet data in case when it already exists", async function () {
+  describe("Send DELETE request for valid petId but without api_key", function () {
+    it("Add a new pet", async function () {
+      await addNewPet(newPet);
+      await checkPetExist(newPet.id.toString());
+    });
+
+    it("Send DELETE request and should receive a response with successful status code", async function () {
+      await request(petUrl)
+        .delete(newPet.id.toString())
+        .expect(200)
+        .catch((err) => expect.fail(err));
+    });
+  });
+
+  describe("Delete petId non-existent pet data", function () {
+    before(async function () {
       await deletePet(newPet.id.toString());
       await checkPetNotExist(newPet.id.toString());
     });
 
-    it("Send request and should receive response with pet not found", async function () {
+    it("Should receive a 404 error response", async function () {
       await request(petUrl)
         .delete(newPet.id.toString())
         .set("api_key", "special-key")
@@ -96,21 +111,7 @@ describe("DELETE::/pet/$petId", function () {
         .then((res) => {
           expect(res.body.message).to.be.eql("Pet not found");
         })
-        .catch((err) => assert.fail(err));
-    });
-  });
-
-  describe("Send delete request for valid petId but without api_key", function () {
-    it("Add a new pet for test", async function () {
-      await addNewPet(newPet);
-      await checkPetExist(newPet.id.toString());
-    });
-
-    it("Send request and should receive a response with successful status code", async function () {
-      await request(petUrl)
-        .delete(newPet.id.toString())
-        .expect(200)
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 });

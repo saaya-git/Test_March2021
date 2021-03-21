@@ -1,10 +1,11 @@
+/* eslint-disable mocha/no-hooks-for-single-case */
 const expect = require("chai").expect;
 const request = require("supertest");
 const petUrl = "https://petstore.swagger.io/v2/pet/";
 
 describe("GET::/pet/$petId", function () {
   describe("Get request for non-existing petId", function () {
-    it("Delete pet data in case when it already exists", function (done) {
+    before(function (done) {
       request(petUrl)
         .delete("100")
         .then((res) => {
@@ -13,7 +14,7 @@ describe("GET::/pet/$petId", function () {
         });
     });
 
-    it("Send request and should receive a response with Pet not found", function (done) {
+    it("Send GET request and should receive a 404 error response", function (done) {
       request(petUrl)
         .get("100")
         .expect(404)
@@ -26,12 +27,11 @@ describe("GET::/pet/$petId", function () {
   });
 
   describe("Request with empty parameter", function () {
-    it("Should receive a validation error response", function (done) {
+    it("Should receive a 405 error response", function (done) {
       request(petUrl)
         .get("")
-        .expect(400)
-        .then((res) => {
-          expect(res.body.message).to.be.eql("Invalid ID supplied");
+        .expect(405)
+        .then(() => {
           done();
         })
         .catch((err) => done(err));
@@ -39,7 +39,7 @@ describe("GET::/pet/$petId", function () {
   });
 
   describe("Request with invalid string parameter", function () {
-    it("Should receive a validation error response", function (done) {
+    it("Should receive a 400 error response", function (done) {
       request(petUrl)
         .get("ABC")
         .expect(400)
@@ -52,7 +52,7 @@ describe("GET::/pet/$petId", function () {
   });
 
   describe("Request with overflowed value", function () {
-    it("Should receive a validation error response", function (done) {
+    it("Should receive a 400 error response", function (done) {
       request(petUrl)
         .get("9223372036854775808")
         .expect(400)
@@ -67,7 +67,7 @@ describe("GET::/pet/$petId", function () {
 
 describe("GET::/pet/findByStatus", function () {
   describe("Filtering with valid status:'available'", function () {
-    it("Should receive a succsessful response", function (done) {
+    it("Should receive a successful response", function (done) {
       request(petUrl)
         .get("findByStatus?status=available")
         .expect(200)
@@ -90,7 +90,7 @@ describe("GET::/pet/findByStatus", function () {
   });
 
   describe("Filtering with non-existing status", function () {
-    it("Should receive a succsessful response", function (done) {
+    it("Should receive a successful response", function (done) {
       request(petUrl)
         .get("findByStatus?status=" + Math.random().toString(16).substr(2, 8))
         .expect(200)

@@ -1,7 +1,8 @@
+/* eslint-disable mocha/no-hooks-for-single-case */
 const cloneDeep = require("lodash.clonedeep");
 const request = require("supertest");
 const chai = require("chai");
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const chaiSubset = require("chai-subset");
 
 chai.use(chaiSubset);
@@ -59,19 +60,19 @@ async function checkPetNotExist(id) {
 }
 
 describe("PUT::/pet", function () {
-  describe("Update existing pet with all request fields", function () {
+  describe("Update existing pet with all request fields present", function () {
     after(async function () {
       await deletePet(newPet.id.toString());
       await checkPetNotExist(newPet.id.toString());
     });
 
-    it("Add a new pet for test", async function () {
+    it("Add a new pet", async function () {
       await addNewPet(newPet);
       await checkPetExist(newPet.id.toString());
     });
 
     let updatedPet;
-    it("The pet data should be successfully updated", async function () {
+    it("Send PUT request and should receive a successful response", async function () {
       updatedPet = cloneDeep(newPet);
       updatedPet.category.id = 1;
       updatedPet.category.name = "Dog";
@@ -92,7 +93,7 @@ describe("PUT::/pet", function () {
             "application/json"
           );
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
 
     it("Confirm the updated pet data", async function () {
@@ -102,17 +103,17 @@ describe("PUT::/pet", function () {
         .then((res) => {
           expect(res.body).to.containSubset(updatedPet);
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Update non-existing petId", function () {
-    it("Delete pet data in case when it already exists", async function () {
+    before(async function () {
       await deletePet(newPet.id.toString());
       await checkPetNotExist(newPet.id.toString());
     });
 
-    it("Send request and should receive a response with Pet not found", async function () {
+    it("Send PUT request and should receive a 404 error response", async function () {
       await request(petUrl)
         .put("")
         .send(newPet)
@@ -121,17 +122,22 @@ describe("PUT::/pet", function () {
         .then((res) => {
           expect(res.body.message).to.be.eql("Pet not found");
         })
-        .catch((err) => assert.fail(err));
+        .catch((err) => expect.fail(err));
     });
   });
 
   describe("Update pet with empty fields", function () {
-    it("Add a new pet for test", async function () {
+    after(async function () {
+      await deletePet(newPet.id.toString());
+      await checkPetNotExist(newPet.id.toString());
+    });
+
+    it("Add a new pet", async function () {
       await addNewPet(newPet);
       await checkPetExist(newPet.id.toString());
     });
 
-    it("Send request and should receive a validation error response", async function () {
+    it("Send PUT request and should receive a 405 error response", async function () {
       await request(petUrl)
         .put("")
         .send(JSON.stringify({}))
@@ -140,22 +146,22 @@ describe("PUT::/pet", function () {
         .then((res) => {
           expect(res.body.message).to.be.eql("Validation exception");
         })
-        .catch((err) => assert.fail(err));
-    });
-
-    it("Delete the added pet for test", async function () {
-      await deletePet(newPet.id.toString());
-      await checkPetNotExist(newPet.id.toString());
+        .catch((err) => expect.fail(err));
     });
   });
 
-  describe("Invalid value in netsted json fields", function () {
-    it("Add a new pet for test", async function () {
+  describe("Invalid value in nested json fields", function () {
+    after(async function () {
+      await deletePet(newPet.id.toString());
+      await checkPetNotExist(newPet.id.toString());
+    });
+
+    it("Add a new pet", async function () {
       await addNewPet(newPet);
       await checkPetExist(newPet.id.toString());
     });
 
-    it("Send request and sould receive a validation error response", async function () {
+    it("Send PUT request and should receive a 405 error response", async function () {
       let updatedPet = cloneDeep(newPet);
       updatedPet.tags.id = "ABC";
 
@@ -167,12 +173,7 @@ describe("PUT::/pet", function () {
         .then((res) => {
           expect(res.body.message).to.be.eql("Validation exception");
         })
-        .catch((err) => assert.fail(err));
-    });
-
-    it("Delete the added pet for test", async function () {
-      await deletePet(newPet.id.toString());
-      await checkPetNotExist(newPet.id.toString());
+        .catch((err) => expect.fail(err));
     });
   });
 });
